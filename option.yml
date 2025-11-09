@@ -1,0 +1,29 @@
+client:
+  cache: null
+  domain: []
+  impl: api
+  postman:
+    meta_data:
+      cookies:
+        AVS: 1e4m8ifti47229fp476kinhacl716
+      headers: null
+      impersonate: chrome
+      proxies: {}
+    type: curl_cffi
+  retry_times: 5
+dir_rule:
+  base_dir: D:\flask
+  normalize_zh: null
+  rule: Bd_Pname
+download:
+  cache: true
+  image:
+    decode: true
+    suffix: null
+  threading:
+    image: 30
+    photo: 32
+log: true
+plugins:
+  valid: log
+version: '2.1'

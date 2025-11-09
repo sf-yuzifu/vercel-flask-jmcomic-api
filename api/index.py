@@ -46,12 +46,20 @@ it works!
 
 
 @app.get("/album/<int:item_id>/info")
-def get_album_info(item_id: int, impl="html"):
+def get_album_info(item_id: int, impl="html", url=["18comic.vip"]):
     try:
-        a = JmOption.default()
-        if a.client.postman.meta_data.get('cookies') is None:
-            a.client.postman.meta_data['cookies'] = {}  # 确保cookies字段存在
-        a.client.postman.meta_data['cookies']['AVS'] = "1e4m8ifti47229fp476kinhacl716"
+        a = JmOption.construct(
+            {
+                "client": {
+                    "domain": url,
+                    "postman": {
+                        "meta_data": {
+                            "cookies": {"AVS": "1e4m8ifti47229fp476kinhacl716"}
+                        }
+                    },
+                }
+            }
+        )
         # 客户端
         client = a.new_jm_client(impl=impl)
         # 本子实体类
@@ -76,6 +84,8 @@ def get_album_info(item_id: int, impl="html"):
     except Exception as e:
         if str(e).find("只对登录用户可见") != -1:
             return get_album_info(item_id, impl="api")
+        if str(e).find("请求重试全部失败") != -1:
+            return get_album_info(item_id, url=[])
         return jsonify({"code": 500, "message": str(e)}), 500
 
 
