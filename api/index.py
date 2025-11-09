@@ -49,9 +49,9 @@ it works!
 def get_album_info(item_id: int, impl="html"):
     try:
         a = JmOption.default()
-        if a.client.postman.get('cookies') is None:
-            a.client.postman['cookies'] = {}  # 确保cookies字段存在
-        a.client.postman['cookies']['AVS'] = "1e4m8ifti47229fp476kinhacl716"
+        if a.client.postman.meta_data.get('cookies') is None:
+            a.client.postman.meta_data['cookies'] = {}  # 确保cookies字段存在
+        a.client.postman.meta_data['cookies']['AVS'] = "1e4m8ifti47229fp476kinhacl716"
         # 客户端
         client = a.new_jm_client(impl=impl)
         # 本子实体类
