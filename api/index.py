@@ -67,7 +67,7 @@ def get_album_info(item_id: int, impl="html"):
             }
         )
         # 随时获取最新AVS
-        # a.call_all_plugin("after_init")
+        a.call_all_plugin("after_init")
         # 客户端
         client = a.new_jm_client(impl=impl)
         # 本子实体类
