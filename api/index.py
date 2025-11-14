@@ -46,20 +46,28 @@ it works!
 
 
 @app.get("/album/<int:item_id>/info")
-def get_album_info(item_id: int, impl="html", url=["18comic.vip"]):
+def get_album_info(item_id: int, impl="html"):
     try:
         a = JmOption.construct(
             {
                 "client": {
-                    "domain": url,
-                    "postman": {
-                        "meta_data": {
-                            "cookies": {"AVS": "1e4m8ifti47229fpkinhacl716"}
+                    "impl": impl,
+                },
+                "plugins": {
+                    "after_init": [
+                        {
+                            "plugin": "login",
+                            "kwargs": {
+                                "username": "test19195456546",
+                                "password": "test19195456546",
+                            },
                         }
-                    },
-                }
+                    ]
+                },
             }
         )
+        # 随时获取最新AVS
+        # a.call_all_plugin("after_init")
         # 客户端
         client = a.new_jm_client(impl=impl)
         # 本子实体类
@@ -83,11 +91,11 @@ def get_album_info(item_id: int, impl="html", url=["18comic.vip"]):
         )
     except Exception as e:
         if str(e).find("只对登录用户可见") != -1:
-            # print(str(e))
-            return get_album_info(item_id, impl="api", url=[])
+            print("只对登录用户可见", str(e))
+            return get_album_info(item_id, impl="api")
         if str(e).find("请求重试全部失败") != -1:
-            # print(str(e))
-            return get_album_info(item_id, url=[])
+            print("请求重试全部失败", str(e))
+            return get_album_info(item_id)
         return jsonify({"code": 500, "message": str(e)}), 500
 
 
