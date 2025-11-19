@@ -76,14 +76,14 @@ GET /album/<comic_id>/info
 参数:
 - `comic_id`: 本子ID
 
-#### 获取漫画详情
+#### 获取本子封面
 ```
-GET /api/comics/<comic_id>
+GET /album/<comic_id>/cover
 ```
 参数:
-- `comic_id`: 漫画ID
+- `comic_id`: 本子ID
 
-#### 获取章节内容
+#### 获取本子内容
 ```
 GET /photo/<comic_id>/<page>
 ```
