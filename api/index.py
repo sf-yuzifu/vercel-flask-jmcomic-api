@@ -2,6 +2,10 @@ from io import BytesIO
 from flask import Flask, Response, jsonify, request
 from jmcomic import *
 
+import sys
+
+sys.stdout.reconfigure(encoding="utf-8")
+
 app = Flask(__name__)
 app.debug = False
 app.json.ensure_ascii = False
@@ -69,7 +73,7 @@ def get_album_cover(item_id: int):
         print(f"原始图片尺寸: {original_width}x{original_height}")
 
         # 设置最大宽度
-        width = request.args.get('w')
+        width = request.args.get("w")
         max_width = int(width) if width and width.isdigit() else 100
 
         if original_width > max_width:
@@ -124,6 +128,57 @@ def get_album_cover(item_id: int):
                 "X-Image-Compressed-Size": f"{image.size[0]}x{image.size[1]}",
                 "X-Image-File-Size": str(compressed_size),
             },
+        )
+
+    except Exception as e:
+        return jsonify({"code": 500, "message": str(e)}), 500
+
+@app.get("/search/<value>")
+@app.get("/search/<value>/")
+@app.get("/search/<value>/<int:client_page>")
+def get_search(value, client_page=1):
+    try:
+        client = JmOption.default().new_jm_client()
+
+        # 客户端分页设置
+        client_page_size = 10
+        # API分页设置
+        api_page_size = JmModuleConfig.PAGE_SIZE_SEARCH
+
+        # 计算对应的API页码
+        # 公式解释: 客户端第N页的起始数据编号为 (N-1)*client_page_size + 1
+        # 这个编号在哪个API页呢？用这个编号除以API每页大小，再向上取整。
+        api_page = ((client_page - 1) * client_page_size) // api_page_size + 1
+
+        # 计算在该API页内的起始索引 (从0开始)
+        start_index_in_api_page = ((client_page - 1) * client_page_size) % api_page_size
+
+        # 请求对应的API页面
+        page: JmSearchPage = client.search_site(search_query=value, page=api_page)
+
+        # 收集当前API页的所有结果
+        all_results_in_api_page = []
+        for album_id, title in page:
+            all_results_in_api_page.append({"album_id": album_id, "title": title})
+
+        # 从API页结果中截取客户端需要的那10条
+        end_index_in_api_page = start_index_in_api_page + client_page_size
+        client_results = all_results_in_api_page[
+            start_index_in_api_page:end_index_in_api_page
+        ]
+
+        # 计算客户端总页数 (基于API报告的总数)
+        total_client_pages = (page.total + client_page_size - 1) // client_page_size
+
+        return jsonify(
+            {
+                "client_page_size": client_page_size,
+                "client_page_count": total_client_pages,
+                "current_client_page": client_page,
+                "current_api_page": api_page,
+                "start_index_in_api_page": start_index_in_api_page,
+                "results": client_results,
+            }
         )
 
     except Exception as e:

@@ -91,6 +91,15 @@ GET /photo/<comic_id>/<page>
 - `comic_id`: 本子ID
 - `page`: 第几页的图片，不填默认第一页
 
+#### 搜索本子
+```
+GET /search/<keyword>
+GET /search/<keyword>/<page>
+```
+参数:
+- `keyword`: 搜索关键词
+- `page`: 页码（可选，默认第1页）
+
 ## 🗂️ 项目结构
 
 ```
