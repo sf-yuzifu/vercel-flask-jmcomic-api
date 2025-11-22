@@ -41,6 +41,36 @@ def new_try_mkdir(cls, save_dir: str):
 
 JmcomicText.try_mkdir = new_try_mkdir
 
+from urllib.parse import unquote, quote
+import re
+
+
+def decode_search_value(value: str) -> str:
+    """
+    判断并解码搜索值
+    如果值是URL编码，则解码为中文，否则直接返回
+    """
+    # URL编码的特征：包含%后跟两个十六进制字符
+    url_encoded_pattern = r"%[0-9A-Fa-f]{2}"
+
+    # 如果包含URL编码特征，尝试解码
+    if re.search(url_encoded_pattern, value):
+        try:
+            decoded = unquote(value)
+            # 解码后如果还包含URL编码特征，说明可能有多重编码，继续解码
+            while re.search(url_encoded_pattern, decoded):
+                temp = unquote(decoded)
+                if temp == decoded:  # 如果没有变化，停止解码
+                    break
+                decoded = temp
+            return decoded
+        except Exception:
+            # 如果解码失败，返回原值
+            return value
+    else:
+        # 没有URL编码特征，直接返回
+        return value
+
 
 @app.get("/")
 def read_root():
@@ -133,12 +163,16 @@ def get_album_cover(item_id: int):
     except Exception as e:
         return jsonify({"code": 500, "message": str(e)}), 500
 
+
 @app.get("/search/<value>")
 @app.get("/search/<value>/")
 @app.get("/search/<value>/<int:client_page>")
 def get_search(value, client_page=1):
     try:
         client = JmOption.default().new_jm_client()
+
+        search_keyword = decode_search_value(value)
+        print(f"原始值: {value}, 解码后: {search_keyword}")
 
         # 客户端分页设置
         client_page_size = 10
@@ -154,7 +188,9 @@ def get_search(value, client_page=1):
         start_index_in_api_page = ((client_page - 1) * client_page_size) % api_page_size
 
         # 请求对应的API页面
-        page: JmSearchPage = client.search_site(search_query=value, page=api_page)
+        page: JmSearchPage = client.search_site(
+            search_query=search_keyword, page=api_page
+        )
 
         # 收集当前API页的所有结果
         all_results_in_api_page = []
