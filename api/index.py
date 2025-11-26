@@ -91,8 +91,6 @@ def get_album_cover(item_id: int):
         if not captured_images:
             return jsonify({"code": 404, "message": "No image captured"}), 404
 
-        print(captured_images)
-
         # 获取第一个捕获的图片
         image = next(iter(captured_images.values()))
         captured_images.clear()  # 清空捕获的图片
@@ -243,19 +241,20 @@ def get_album_info(item_id: int, impl="html", url=["18comic.vip"]):
                 },
             }
         )
-        # 随时获取最新AVS
-        # a.call_all_plugin("after_init")
         # 客户端
         client = a.new_jm_client(impl=impl)
         # 本子实体类
         album: JmAlbumDetail = client.get_album_detail(item_id)
+
+        photo_detail = client.get_photo_detail(item_id)
+        total_pages = len(photo_detail)
 
         return jsonify(
             {
                 "item_id": item_id,
                 "name": album.name,
                 "actors": album.actors,
-                "page_count": album.page_count,
+                "page_count": total_pages,
                 "tags": album.tags,
                 "authors": album.authors,
                 "pub_date": album.pub_date,
@@ -312,7 +311,7 @@ def get_image(item_id: int, page: int = 1):
         print(f"原始图片尺寸: {original_width}x{original_height}")
 
         # 设置最大宽度
-        max_width = 500
+        max_width = 600
 
         if original_width > max_width:
             # 计算等比例缩放后的高度
