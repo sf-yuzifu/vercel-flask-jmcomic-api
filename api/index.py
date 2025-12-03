@@ -371,5 +371,23 @@ def get_image(item_id: int, page: int = 1):
         return jsonify({"code": 500, "message": str(e)}), 500
 
 
+@app.get("/config")
+@app.get("/config/")
+def config():
+    return jsonify(
+        {
+            "JMComic": {
+                "name": "JMComic",
+                "apiUrl": "https://jmcomic.yzf.moe",
+                "searchPath": "/search/<text>/<page>",
+                "detailPath": "/album/<id>/info",
+                "photoPath": "/photo/<id>/<page>",
+                "coverPath": "/album/<id>/cover",
+                "type": "jmcomic",
+            },
+        }
+    )
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000)
