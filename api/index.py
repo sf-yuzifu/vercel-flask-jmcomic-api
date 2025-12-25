@@ -225,7 +225,6 @@ def get_album_info(item_id: int, impl="html", url=["18comic.vip"]):
         a = JmOption.construct(
             {
                 "client": {
-                    "domain": url,
                     "impl": impl,
                 },
                 "plugins": {
@@ -378,7 +377,7 @@ def config():
         {
             "JMComic": {
                 "name": "JMComic",
-                "apiUrl": "https://jmcomic.yzf.moe",
+                "apiUrl": request.host_url,
                 "searchPath": "/search/<text>/<page>",
                 "detailPath": "/album/<id>",
                 "photoPath": "/photo/<id>/<page>",
