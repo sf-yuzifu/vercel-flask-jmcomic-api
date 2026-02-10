@@ -348,8 +348,12 @@ def get_image(item_id: int, page: int = 1):
         original_width, original_height = image.size
         print(f"原始图片尺寸: {original_width}x{original_height}")
 
-        # 设置最大宽度
-        max_width = 600
+        # 从URL参数获取width和quality
+        width = request.args.get("width")
+        max_width = int(width) if width and width.isdigit() else 600
+        
+        quality = request.args.get("quality")
+        quality_value = int(quality) if quality and quality.isdigit() else 50
 
         if original_width > max_width:
             # 计算等比例缩放后的高度
@@ -362,9 +366,9 @@ def get_image(item_id: int, page: int = 1):
 
         # 进一步优化图片质量和大小
         optimize_options = {
-            "quality": 50,  # 降低质量到50%
-            "optimize": True,  # 启用优化
-            "progressive": True,  # 启用渐进式JPEG（对大图加载友好）
+            "quality": quality_value,
+            "optimize": True,
+            "progressive": True,
         }
 
         # 如果是PNG或WEBP格式，转换为JPEG以进一步减小体积
@@ -373,7 +377,7 @@ def get_image(item_id: int, page: int = 1):
             background = Image.new("RGB", image.size, (255, 255, 255))
             # 如果有透明通道，将图片粘贴到白色背景上
             if image.mode == "RGBA":
-                background.paste(image, mask=image.split()[-1])  # 使用alpha通道作为mask
+                background.paste(image, mask=image.split()[-1])
             else:
                 background.paste(image)
             image = background
