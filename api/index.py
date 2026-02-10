@@ -204,14 +204,27 @@ def get_search(value, client_page=1):
         # 计算客户端总页数 (基于API报告的总数)
         total_client_pages = (page.total + client_page_size - 1) // client_page_size
 
+        # 判断是否还有更多页
+        has_more = client_page < total_client_pages
+
+        # 获取API URL用于构建封面链接
+        api_url = request.host_url.rstrip("/")
+
+        # 构建符合文档要求的搜索结果格式
+        results = []
+        for item in client_results:
+            results.append({
+                "comic_id": item["album_id"],
+                "title": item["title"],
+                "cover_url": f"{api_url}/album/{item['album_id']}/cover",
+                "pages": 0
+            })
+
         return jsonify(
             {
-                "client_page_size": client_page_size,
-                "client_page_count": total_client_pages,
-                "current_client_page": client_page,
-                "current_api_page": api_page,
-                "start_index_in_api_page": start_index_in_api_page,
-                "results": client_results,
+                "page": client_page,
+                "has_more": has_more,
+                "results": results
             }
         )
 
@@ -249,20 +262,18 @@ def get_album_info(item_id: int, impl="html", url=["18comic.vip"]):
         photo_detail = client.get_photo_detail(item_id)
         total_pages = len(photo_detail)
 
+        api_url = request.host_url.rstrip("/")
+        cover_url = f"{api_url}/album/{item_id}/cover"
+
         return jsonify(
             {
                 "item_id": item_id,
                 "name": album.name,
-                "actors": album.actors,
                 "page_count": total_pages,
-                "tags": album.tags,
-                "authors": album.authors,
-                "pub_date": album.pub_date,
-                "description": album.description,
                 "views": album.views,
-                "update_date": album.update_date,
-                "likes": album.likes,
-                "comment_count": album.comment_count,
+                "cover": cover_url,
+                "tags": album.tags,
+                "total_chapters": len(album.episode_list),
             }
         )
     except Exception as e:
@@ -272,6 +283,33 @@ def get_album_info(item_id: int, impl="html", url=["18comic.vip"]):
         if str(e).find("请求重试全部失败") != -1:
             print("请求重试全部失败", str(e))
             return get_album_info(item_id, url=[])
+        return jsonify({"code": 500, "message": str(e)}), 500
+
+
+@app.get("/photo/<int:item_id>/chapter/<int:chapter>")
+def get_photo_chapter(item_id: int, chapter: int = 1):
+    try:
+        a = JmOption.default().new_jm_client()
+        
+        thisChapter: JmAlbumDetail = a.get_album_detail(item_id)
+        print(thisChapter.episode_list[chapter - 1][0])
+        
+        if len(thisChapter.episode_list) < 1 or chapter > len(thisChapter.episode_list):
+            return jsonify({"code": 404, "message": "Chapter not found"}), 404
+        
+        photo_id = thisChapter.episode_list[chapter - 1][0]
+        
+        photo_detail: JmPhotoDetail = a.get_photo_detail(photo_id)
+        
+        api_url = request.host_url.rstrip("/")
+        
+        images = [{"url": f"{api_url}/photo/{photo_id}/{page_num}"} for page_num in range(1, len(photo_detail) + 1)]
+        
+        return jsonify({
+            "title": photo_detail.name ,
+            "images": images
+        })
+    except Exception as e:
         return jsonify({"code": 500, "message": str(e)}), 500
 
 
@@ -374,15 +412,15 @@ def get_image(item_id: int, page: int = 1):
 @app.get("/config")
 @app.get("/config/")
 def config():
+    api_url = request.host_url.rstrip("/")
     return jsonify(
         {
             "JMComic": {
                 "name": "JMComic",
-                "apiUrl": request.host_url.rsplit("/", 1)[0],
-                "searchPath": "/search/<text>/<page>",
+                "apiUrl": api_url,
                 "detailPath": "/album/<id>",
-                "photoPath": "/photo/<id>/<page>",
-                "coverPath": "/album/<id>/cover",
+                "photoPath": "/photo/<id>/chapter/<chapter>",
+                "searchPath": "/search/<text>/<page>",
                 "type": "jmcomic",
             },
         }
