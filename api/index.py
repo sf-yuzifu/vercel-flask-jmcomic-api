@@ -145,12 +145,15 @@ def get_album_cover(item_id: int):
 
         print(f"压缩后文件大小: {compressed_size / 1024:.1f} KB")
 
+        # 生成文件名
+        filename = f"{item_id}_cover.jpg"
+
         # 返回图片响应
         return Response(
             img_io.getvalue(),
             mimetype="image/jpeg",
             headers={
-                "Content-Disposition": "inline",
+                "Content-Disposition": f'inline; filename="{filename}"',
                 "Cache-Control": "public, max-age=3600",
                 "X-Image-Original-Size": f"{original_width}x{original_height}",
                 "X-Image-Compressed-Size": f"{image.size[0]}x{image.size[1]}",
@@ -396,12 +399,15 @@ def get_image(item_id: int, page: int = 1):
 
         print(f"压缩后文件大小: {compressed_size / 1024:.1f} KB")
 
+        # 生成文件名
+        filename = f"{item_id}_{page}.jpg"
+
         # 返回图片响应
         return Response(
             img_io.getvalue(),
             mimetype="image/jpeg",
             headers={
-                "Content-Disposition": "inline",
+                "Content-Disposition": f'inline; filename="{filename}"',
                 "Cache-Control": "public, max-age=3600",
                 "X-Image-Original-Size": f"{original_width}x{original_height}",
                 "X-Image-Compressed-Size": f"{image.size[0]}x{image.size[1]}",
