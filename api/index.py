@@ -100,9 +100,9 @@ def get_album_cover(item_id: int):
         original_width, original_height = image.size
         print(f"原始图片尺寸: {original_width}x{original_height}")
 
-        # 设置最大宽度
+        # 设置最大宽度，针对IoT设备优化
         width = request.args.get("w")
-        max_width = int(width) if width and width.isdigit() else 100
+        max_width = int(width) if width and width.isdigit() else 200
 
         if original_width > max_width:
             # 计算等比例缩放后的高度
@@ -115,9 +115,9 @@ def get_album_cover(item_id: int):
 
         # 进一步优化图片质量和大小
         optimize_options = {
-            "quality": 50,  # 降低质量到50%
-            "optimize": True,  # 启用优化
-            "progressive": True,  # 启用渐进式JPEG（对大图加载友好）
+            "quality": 50,
+            "optimize": True,
+            "progressive": True,
         }
 
         # 如果是PNG或WEBP格式，转换为JPEG以进一步减小体积
@@ -154,10 +154,8 @@ def get_album_cover(item_id: int):
             mimetype="image/jpeg",
             headers={
                 "Content-Disposition": f'inline; filename="{filename}"',
-                "Cache-Control": "public, max-age=3600",
-                "X-Image-Original-Size": f"{original_width}x{original_height}",
-                "X-Image-Compressed-Size": f"{image.size[0]}x{image.size[1]}",
-                "X-Image-File-Size": str(compressed_size),
+                "Cache-Control": "public, max-age=86400",
+                "Content-Type": "image/jpeg",
             },
         )
 
@@ -306,11 +304,7 @@ def get_photo_chapter(item_id: int, chapter: int = 1):
         
         api_url = request.host_url.rstrip("/")
         
-        # 从URL参数获取width和quality，如果没有则使用默认值
-        width = request.args.get("width", "600")
-        quality = request.args.get("quality", "50")
-        
-        images = [{"url": f"{api_url}/photo/{photo_id}/{photo_id}_{page_num}.jpg?width={width}&quality={quality}"} for page_num in range(1, len(photo_detail) + 1)]
+        images = [{"url": f"{api_url}/photo/{photo_id}/{photo_id}_{page_num}.jpg"} for page_num in range(1, len(photo_detail) + 1)]
         
         return jsonify({
             "title": photo_detail.name,
@@ -360,7 +354,7 @@ def get_image(item_id: int, page: str = "0_1.jpg"):
         original_width, original_height = image.size
         print(f"原始图片尺寸: {original_width}x{original_height}")
 
-        # 从URL参数获取width和quality
+        # 从URL参数获取width和quality，默认值针对IoT设备优化
         width = request.args.get("width")
         max_width = int(width) if width and width.isdigit() else 600
         
@@ -417,10 +411,8 @@ def get_image(item_id: int, page: str = "0_1.jpg"):
             mimetype="image/jpeg",
             headers={
                 "Content-Disposition": f'inline; filename="{filename}"',
-                "Cache-Control": "public, max-age=3600",
-                "X-Image-Original-Size": f"{original_width}x{original_height}",
-                "X-Image-Compressed-Size": f"{image.size[0]}x{image.size[1]}",
-                "X-Image-File-Size": str(compressed_size),
+                "Cache-Control": "public, max-age=86400",
+                "Content-Type": "image/jpeg",
             },
         )
 
