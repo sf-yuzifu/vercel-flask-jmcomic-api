@@ -1,6 +1,8 @@
 from io import BytesIO
 from flask import Flask, Response, jsonify, request
 from jmcomic import *
+import requests
+import logging
 
 import sys
 
@@ -303,7 +305,7 @@ def get_photo_chapter(item_id: int, chapter: int = 1):
         
         api_url = request.host_url.rstrip("/")
         
-        images = [{"url": f"{api_url}/photo/{photo_id}/{photo_id}_{page_num}.jpg"} for page_num in range(1, len(photo_detail) + 1)]
+        images = [{"url": f"{api_url}/image/proxy?url={api_url}/photo/{photo_id}/{photo_id}_{page_num}.jpg"} for page_num in range(1, len(photo_detail) + 1)]
         
         return jsonify({
             "title": photo_detail.name,
@@ -312,6 +314,70 @@ def get_photo_chapter(item_id: int, chapter: int = 1):
     except Exception as e:
         return jsonify({"code": 500, "message": str(e)}), 500
 
+# 在Flask路由部分添加图片代理接口
+@app.get("/image/proxy")
+def image_proxy():
+    """图片代理接口，处理图片尺寸和质量"""
+    try:
+        image_url = request.args.get("url")
+        if not image_url:
+            return jsonify({"error": "缺少url参数"}), 400
+
+        # 设置目标宽度和图片质量，默认值针对IoT设备优化
+        target_width = int(request.args.get("width", 600))
+        quality = int(request.args.get("quality", 50))
+
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        }
+
+        resp = requests.get(image_url, headers=headers, timeout=30)
+        if resp.status_code != 200:
+            return jsonify({"error": f"图片下载失败: {resp.status_code}"}), 500
+
+        # 处理图片
+        original_image = Image.open(BytesIO(resp.content))
+
+        # 计算新高度，保持宽高比
+        width_percent = target_width / float(original_image.size[0])
+        target_height = int(float(original_image.size[1]) * float(width_percent))
+
+        # 调整图片尺寸
+        resized_image = original_image.resize(
+            (target_width, target_height), Image.Resampling.LANCZOS
+        )
+
+        # 保存为JPEG格式并调整质量
+        output_buffer = BytesIO()
+        if resized_image.mode in ("RGBA", "LA", "P"):
+            # 如果图片有透明度，转换为RGB
+            background = Image.new("RGB", resized_image.size, (255, 255, 255))
+            background.paste(
+                resized_image,
+                mask=(
+                    resized_image.split()[-1] if resized_image.mode == "RGBA" else None
+                ),
+            )
+            resized_image = background
+        elif resized_image.mode != "RGB":
+            resized_image = resized_image.convert("RGB")
+
+        resized_image.save(output_buffer, format="JPEG", quality=quality, optimize=True)
+        output_buffer.seek(0)
+
+        # 返回处理后的图片
+        return Response(
+            output_buffer.getvalue(),
+            mimetype="image/jpeg",
+            headers={
+                "Cache-Control": "public, max-age=86400",
+                "Content-Type": "image/jpeg",
+            },
+        )
+
+    except Exception as e:
+        logging.error(f"图片处理失败: {str(e)}")
+        return jsonify({"error": f"图片处理失败: {str(e)}"}), 500
 
 @app.get("/photo/<int:item_id>")
 @app.get("/photo/<int:item_id>/")
@@ -353,46 +419,11 @@ def get_image(item_id: int, page: str = "0_1.jpg"):
         original_width, original_height = image.size
         print(f"原始图片尺寸: {original_width}x{original_height}")
 
-        # 从URL参数获取width和quality，默认值针对IoT设备优化
-        width = request.args.get("width")
-        max_width = int(width) if width and width.isdigit() else 600
-        
-        quality = request.args.get("quality")
-        quality_value = int(quality) if quality and quality.isdigit() else 50
-
-        if original_width > max_width:
-            # 计算等比例缩放后的高度
-            new_height = int((max_width / original_width) * original_height)
-            # 使用高质量的重采样算法
-            image = image.resize((max_width, new_height), Image.Resampling.LANCZOS)
-            print(f"压缩后尺寸: {max_width}x{new_height}")
-        else:
-            print(f"图片宽度 {original_width}px 已小于限制 {max_width}px，无需压缩")
-
-        # 进一步优化图片质量和大小
-        optimize_options = {
-            "quality": quality_value,
-            "optimize": True,
-        }
-
-        # 如果是PNG或WEBP格式，转换为JPEG以进一步减小体积
-        if image.mode in ["RGBA", "P"]:
-            # 创建白色背景
-            background = Image.new("RGB", image.size, (255, 255, 255))
-            # 如果有透明通道，将图片粘贴到白色背景上
-            if image.mode == "RGBA":
-                background.paste(image, mask=image.split()[-1])
-            else:
-                background.paste(image)
-            image = background
-        elif image.mode != "RGB":
-            image = image.convert("RGB")
-
         # 将PIL.Image转换为字节流
         img_io = BytesIO()
 
         # 保存为JPEG格式到内存（应用压缩设置）
-        image.save(img_io, "JPEG", **optimize_options)
+        image.save(img_io, "JPEG")
 
         # 获取压缩后的大小
         compressed_size = img_io.tell()
