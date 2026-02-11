@@ -117,7 +117,6 @@ def get_album_cover(item_id: int):
         optimize_options = {
             "quality": 50,
             "optimize": True,
-            "progressive": True,
         }
 
         # 如果是PNG或WEBP格式，转换为JPEG以进一步减小体积
@@ -374,7 +373,6 @@ def get_image(item_id: int, page: str = "0_1.jpg"):
         optimize_options = {
             "quality": quality_value,
             "optimize": True,
-            "progressive": True,
         }
 
         # 如果是PNG或WEBP格式，转换为JPEG以进一步减小体积
