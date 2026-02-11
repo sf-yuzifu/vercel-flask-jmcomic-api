@@ -306,10 +306,14 @@ def get_photo_chapter(item_id: int, chapter: int = 1):
         
         api_url = request.host_url.rstrip("/")
         
-        images = [{"url": f"{api_url}/photo/{photo_id}/{page_num}"} for page_num in range(1, len(photo_detail) + 1)]
+        # 从URL参数获取width和quality，如果没有则使用默认值
+        width = request.args.get("width", "600")
+        quality = request.args.get("quality", "50")
+        
+        images = [{"url": f"{api_url}/photo/{photo_id}/{photo_id}_{page_num}.jpg?width={width}&quality={quality}"} for page_num in range(1, len(photo_detail) + 1)]
         
         return jsonify({
-            "title": photo_detail.name ,
+            "title": photo_detail.name,
             "images": images
         })
     except Exception as e:
@@ -318,17 +322,22 @@ def get_photo_chapter(item_id: int, chapter: int = 1):
 
 @app.get("/photo/<int:item_id>")
 @app.get("/photo/<int:item_id>/")
-@app.get("/photo/<int:item_id>/<int:page>")
-def get_image(item_id: int, page: int = 1):
+@app.get("/photo/<int:item_id>/<page>")
+def get_image(item_id: int, page: str = "0_1.jpg"):
     """返回图片响应"""
     try:
+        # 从字符串中提取页码，格式为 "item_id_page.jpg"
+        if "_" in page and page.endswith(".jpg"):
+            page_num = int(page.split("_")[1].replace(".jpg", ""))
+        else:
+            page_num = int(page)
 
         class ImageDownloader(JmDownloader):
             def do_filter(self, detail):
                 if detail.is_photo():
                     photo: JmPhotoDetail = detail
                     # 支持[start,end,step]
-                    return photo[page - 1 : page]
+                    return photo[page_num - 1 : page_num]
                 return detail
 
         JmModuleConfig.CLASS_DOWNLOADER = ImageDownloader
@@ -399,8 +408,8 @@ def get_image(item_id: int, page: int = 1):
 
         print(f"压缩后文件大小: {compressed_size / 1024:.1f} KB")
 
-        # 生成文件名
-        filename = f"{item_id}_{page}.jpg"
+        # 使用传入的文件名
+        filename = page if "_" in page and page.endswith(".jpg") else f"{item_id}_{page_num}.jpg"
 
         # 返回图片响应
         return Response(
